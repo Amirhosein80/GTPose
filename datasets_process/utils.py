@@ -1,3 +1,6 @@
+# codes from https://github.com/dx118/dynaip.git
+
+
 import roma
 import torch
 import random
@@ -133,58 +136,6 @@ def convert_point_excel(point):
     return point
 
 
-def collate_fn(batch):
-    keys = batch[0].keys()
-    out = {}
-    for i, k in enumerate(keys):
-        if k == "dataset":
-            out[k] = [b[k] for b in batch]
-        else:
-            out[k] = torch.cat([b[k].unsqueeze(0) for b in batch], dim=0)
-    return out
-
-
-class RandomResample:
-    def __init__(self, target_fps_list, list_keys, p=0.5):
-        self.p = p
-        self.list_keys = list_keys
-        self.target_fps_list = target_fps_list
-
-    def __call__(self, samples):
-        if random.random() < self.p:
-            for key in self.list_keys:
-                target_fps = np.random.choice(self.target_fps_list)
-                indices = torch.arange(0, samples[key].shape[1], 60 / target_fps)
-
-                start_indices = torch.floor(indices).long()
-                end_indices = torch.ceil(indices).long()
-                end_indices[end_indices >= samples[key].shape[1]] = samples[key].shape[1] - 1  # handling edge cases
-
-                start = samples[key][:, start_indices]
-                end = samples[key][:, end_indices]
-
-                floats = indices - start_indices
-                floats = floats.unsqueeze(0)
-                for shape_index in range(len(samples[key].shape) - 2):
-                    floats = floats.unsqueeze(-1)
-                weights = torch.ones_like(start) * floats
-                samples[key] = torch.lerp(start, end, weights)
-            
-        return samples
-
-
-class UniformNoise:
-    def __init__(self, list_keys, noise=0.1, p=0.5):
-        self.p = p
-        self.list_keys
-        self.noise = noise
-
-    def __call__(self, samples):
-        for key in self.list_keys:
-            if random.random() < self.p:
-                noise = torch.zeros_like(samples[key]).uniform_(-self.noise, self.noise)
-                samples[key] += noise
-        return samples
 
 
 if __name__ == '__main__':
