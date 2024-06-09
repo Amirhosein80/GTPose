@@ -2,16 +2,15 @@ r"""
     SMPL/MANO/SMPLH parametric model. Modified from https://github.com/CalciferZh/SMPL.
 """
 
-
-__all__ = ['ParametricModel']
-
 import pickle
+import enum
 
 import numpy as np
 import torch
 import os
 
 from .kinematics import *
+from .utils import append_one, append_zero
 
 class ParametricModel:
     r"""
@@ -164,7 +163,7 @@ class ParametricModel:
                         [batch_size, num_joint, 3, 3] (rotation matrices).
         :return: Joint global rotation, in shape [batch_size, num_joint, 3, 3].
         """
-        return M.forward_kinematics_R(R_local, self.parent)
+        return forward_kinematics_R(R_local, self.parent)
 
     def inverse_kinematics_R(self, R_global: torch.Tensor):
         r"""
@@ -184,7 +183,7 @@ class ParametricModel:
                          [batch_size, num_joint, 3, 3] (rotation matrices).
         :return: Joint local rotation, in shape [batch_size, num_joint, 3, 3].
         """
-        return M.inverse_kinematics_R(R_global, self.parent)
+        return inverse_kinematics_R(R_global, self.parent)
 
     def forward_kinematics_T(self, T_local: torch.Tensor):
         r"""
@@ -205,7 +204,7 @@ class ParametricModel:
                         [batch_size, num_joint, 4, 4] (homogeneous transformation matrices).
         :return: Joint global transformation matrix, in shape [batch_size, num_joint, 4, 4].
         """
-        return M.forward_kinematics_T(T_local, self.parent)
+        return forward_kinematics_T(T_local, self.parent)
 
     def inverse_kinematics_T(self, T_global: torch.Tensor):
         r"""
@@ -226,7 +225,7 @@ class ParametricModel:
                         [batch_size, num_joint, 4, 4] (homogeneous transformation matrices).
         :return: Joint local transformation matrix, in shape [batch_size, num_joint, 4, 4].
         """
-        return M.inverse_kinematics_T(T_global, self.parent)
+        return inverse_kinematics_T(T_global, self.parent)
 
     def forward_kinematics(self, pose: torch.Tensor, shape: torch.Tensor = None, tran: torch.Tensor = None,
                            calc_mesh=False):
@@ -248,18 +247,18 @@ class ParametricModel:
 
         pose = pose.view(pose.shape[0], -1, 3, 3)
         j, v = [_.expand(pose.shape[0], -1, -1) for _ in self.get_zero_pose_joint_and_vertex(shape)]
-        T_local = M.transformation_matrix(pose, self.joint_position_to_bone_vector(j))
+        T_local = transformation_matrix(pose, self.joint_position_to_bone_vector(j))
         T_global = self.forward_kinematics_T(T_local)
-        pose_global, joint_global = M.decode_transformation_matrix(T_global)
+        pose_global, joint_global = decode_transformation_matrix(T_global)
         if calc_mesh is False:
             return pose_global, add_tran(joint_global), None, joint_global
 
-        T_global[..., -1:] -= torch.matmul(T_global, M.append_zero(j, dim=-1).unsqueeze(-1))
+        T_global[..., -1:] -= torch.matmul(T_global, append_zero(j, dim=-1).unsqueeze(-1))
         T_vertex = torch.tensordot(T_global, self._skinning_weights, dims=([1], [1])).permute(0, 3, 1, 2)
         if self.use_pose_blendshape:
             r = (pose[:, 1:] - torch.eye(3, device=pose.device)).flatten(1)
             v = v + torch.tensordot(r, self._posedirs, dims=([1], [2]))
-        vertex_global = torch.matmul(T_vertex, M.append_one(v, dim=-1).unsqueeze(-1)).squeeze(-1)[..., :3]
+        vertex_global = torch.matmul(T_vertex, append_one(v, dim=-1).unsqueeze(-1)).squeeze(-1)[..., :3]
         return pose_global, add_tran(joint_global), add_tran(vertex_global), joint_global
 
     def view_joint(self, joint_list: list, fps=60, distance_between_subjects=0.8):
@@ -355,3 +354,34 @@ class ParametricModel:
         return self.view_mesh(verts, fps, distance_between_subjects=distance_between_subjects)
 
 
+
+class SMPLJoint(enum.Enum):
+    r"""
+    Prefix L = left; Prefix R = right.
+    """
+    ROOT = 0
+    PELVIS = 0
+    SPINE = 0
+    LHIP = 1
+    RHIP = 2
+    SPINE1 = 3
+    LKNEE = 4
+    RKNEE = 5
+    SPINE2 = 6
+    LANKLE = 7
+    RANKLE = 8
+    SPINE3 = 9
+    LFOOT = 10
+    RFOOT = 11
+    NECK = 12
+    LCLAVICLE = 13
+    RCLAVICLE = 14
+    HEAD = 15
+    LSHOULDER = 16
+    RSHOULDER = 17
+    LELBOW = 18
+    RELBOW = 19
+    LWRIST = 20
+    RWRIST = 21
+    LHAND = 22
+    RHAND = 23

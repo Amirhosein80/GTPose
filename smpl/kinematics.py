@@ -1,49 +1,8 @@
-# codes from 
+# codes from https://github.com/Xinyu-Yi/TransPose.git
 
 from functools import partial
-
 import torch
 
-
-# def transformation_matrix_np(R, p):
-#     r"""
-#     Get the homogeneous transformation matrix. (numpy, single)
-#
-#     Transformation matrix :math:`T_{sb} \in SE(3)` of shape [4, 4] can convert points or vectors from b frame
-#     to s frame: :math:`x_s = T_{sb}x_b`.
-#
-#     :param R: The rotation of b frame expressed in s frame, R_sb, in shape [3, 3].
-#     :param p: The position of b frame expressed in s frame, p_s, in shape [3].
-#     :return: The transformation matrix, T_sb, in shape [4, 4].
-#     """
-#     T = np.zeros((4, 4))
-#     T[:3, :3] = R
-#     T[:3, 3] = p
-#     T[3, 3] = 1
-#     return T
-#
-#
-# def adjoint_transformation_matrix_np(R, p):
-#     r"""
-#     Get the adjoint representation of a transformation matrix. (numpy, single)
-#
-#     Adjoint matrix :math:`[Ad_{T_{sb}}]` of shape [6, 6] can convert spatial twist/wrench/Jacobian between b/s frames.
-#
-#         :math:`\mathcal{V}_s = [Ad_{T_{sb}}]\mathcal{V}_b`
-#
-#         :math:`\mathcal{F}_b = [Ad_{T_{sb}}]^T\mathcal{F}_s`
-#
-#         :math:`J_s = [Ad_{T_{sb}}]J_b`
-#
-#     :param R: The rotation of b frame expressed in s frame, R_sb, in shape [3, 3].
-#     :param p: The position of b frame expressed in s frame, p_s, in shape [3].
-#     :return: The adjoint representation of the transformation matrix T_sb, in shape [6, 6].
-#     """
-#     AdT = np.zeros((6, 6))
-#     AdT[:3, :3] = R
-#     AdT[3:, 3:] = R
-#     AdT[3:, :3] = np.dot(vector_cross_matrix_np(p), R)
-#     return AdT
 
 
 def transformation_matrix(R: torch.Tensor, p: torch.Tensor):
